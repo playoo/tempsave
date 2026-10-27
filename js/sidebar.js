@@ -324,7 +324,7 @@ html.dark-mode #sharePopup .share-footer-link strong{color:#e5c977}`;
   const footerLink = el('div', { className: 'share-footer-link' }, content);
   const flA = el('a', { href: window.location.origin + window.location.pathname, target: '_blank', rel: 'noopener' }, footerLink);
   const flStrong = el('strong', {}, flA);
-  flStrong.textContent = '阿虚同学的储物间';
+  flStrong.textContent = '旧梦同学的储物间';
   const closeX = el('div', { className: 'share-close', title: '关闭' }, body);
   closeX.textContent = '✕';
 
@@ -350,7 +350,7 @@ html.dark-mode #sharePopup .share-footer-link strong{color:#e5c977}`;
   }
 
   shareBtn.addEventListener('click', function () {
-    const text = '阿虚同学的储物间（尽量别在微信打开）：' + window.location.href.split('#')[0];
+    const text = '旧梦同学的储物间（尽量别在微信打开）：' + window.location.href.split('#')[0];
     copyText(text).then(openShare, function () {
       // 复制失败（如非安全上下文）也要给出分享入口
       openShare();

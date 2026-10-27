@@ -138,31 +138,31 @@ function highlightRecentLinks() {
 }
 document.addEventListener('DOMContentLoaded', highlightRecentLinks);
 
-function getPromoData() {
-  return [
-    {
-      title: "GPT镜像原生官网，国内直连",
-      content: "世界顶级AI四合一镜像站点，原生官网使用，国内直连。免费、官网一致、稳定（GPT、Claude、Gemni、Grok）",
-      link: "https://oai.oooai.cc",
-      target: "_self",
-      img: "https://wework.qpic.cn/wwpic3az/592908_aizpWJyXReKoJLG_1767945702/0",
-    },
-    {
-      title: "储物间全新福利已部署上线！",
-      content: "外卖、堂食、鲜果、饮品、打车、机票、代驾、酒店、民宿、买药、电影、快递……你的每一笔消费都有机会省一点！",
-      link: "./discount/",
-      target: "_self",
-      img: "https://wework.qpic.cn/wwpic3az/741232_I4mFtmneQbK4fyd_1792168886/0",
-    },
-    {
-      title: "阿虚全新产品「虚空搜索」浏览器扩展正式上线！",
-      content: "可实现 AI 批量提问、对回答进一步总结、批量上传附件，还有影视、音乐、电子书等等资源一键搜索",
-      link: "https://xusearch.com/",
-      target: "_self",
-      img: "https://img30.360buyimg.com/imgzone/jfs/t20271126/547724/4/6262/131367/6ad99438F3ec97bf0/09362ee2ee95a81f.png",
-    },
-  ];
-}
+// function getPromoData() {
+  // return [
+    // {
+      // title: "GPT镜像原生官网，国内直连",
+      // content: "世界顶级AI四合一镜像站点，原生官网使用，国内直连。免费、官网一致、稳定（GPT、Claude、Gemni、Grok）",
+      // link: "https://oai.oooai.cc",
+      // target: "_self",
+      // img: "https://wework.qpic.cn/wwpic3az/592908_aizpWJyXReKoJLG_1767945702/0",
+    // },
+    // {
+      // title: "储物间全新福利已部署上线！",
+      // content: "外卖、堂食、鲜果、饮品、打车、机票、代驾、酒店、民宿、买药、电影、快递……你的每一笔消费都有机会省一点！",
+      // link: "./discount/",
+      // target: "_self",
+      // img: "https://wework.qpic.cn/wwpic3az/741232_I4mFtmneQbK4fyd_1792168886/0",
+    // },
+    // {
+      // title: "阿虚全新产品「虚空搜索」浏览器扩展正式上线！",
+      // content: "可实现 AI 批量提问、对回答进一步总结、批量上传附件，还有影视、音乐、电子书等等资源一键搜索",
+      // link: "https://xusearch.com/",
+      // target: "_self",
+      // img: "https://img30.360buyimg.com/imgzone/jfs/t20271126/547724/4/6262/131367/6ad99438F3ec97bf0/09362ee2ee95a81f.png",
+    // },
+  // ];
+// }
 
 function set2Co2okie() {
   var hour = 1;
