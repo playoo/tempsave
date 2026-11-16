@@ -16,7 +16,68 @@
       padding: 2rem 1rem;
       min-height: 100vh;
     }
+body {
+  background: #f7f9fc;
+  font-family: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  display: flex;
+  justify-content: flex-start;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
 
+/* 动态背景层 */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(77, 143, 197, 0.18), transparent 55%),
+    radial-gradient(circle at 85% 15%, rgba(155, 89, 182, 0.15), transparent 50%),
+    radial-gradient(circle at 75% 85%, rgba(241, 196, 15, 0.12), transparent 55%),
+    radial-gradient(circle at 25% 80%, rgba(52, 152, 219, 0.14), transparent 50%);
+  background-size: 200% 200%;
+  animation: bgFloat 28s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* 第二层柔光，增加层次 */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 60% 40%, rgba(255, 255, 255, 0.55), transparent 45%),
+    radial-gradient(circle at 30% 60%, rgba(255, 255, 255, 0.35), transparent 40%);
+  animation: bgPulse 18s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes bgFloat {
+  0%   { background-position: 0% 0%; }
+  50%  { background-position: 100% 60%; }
+  100% { background-position: 40% 100%; }
+}
+
+@keyframes bgPulse {
+  0%   { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 1;   transform: scale(1.06); }
+}
+
+/* 书签面板：无背景框，靠左 */
+.bookmark-panel {
+  max-width: 960px;
+  width: 100%;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  position: relative;
+  z-index: 1;
+}
     .bookmark-panel {
       max-width: 960px;
       width: 100%;
@@ -231,8 +292,6 @@
       font-weight: 600;
       letter-spacing: 0.3px;
     }
-
-    .locked-folder.unlocked .lock-badge { display: none; }
 
     .recent-bookmark .node-name {
       color: #e67e22;
@@ -898,7 +957,7 @@
             <li><i class="ie"></i><a href="http://mi.talkingdata.com/" data-date="2019-02-11 15:41">TalkingData</a></li>
           </ul>
         </li>
-        <li data-lock="123"><i class="folder"></i><span>信息查询</span>
+        <li><i class="folder"></i><span>信息查询</span>
           <ul class="menu">
             <li><i class="ie"></i><a href="https://www.tianyancha.com/" data-date="2019-02-11 15:41">天眼查</a></li>
             <li><i class="ie"></i><a href="https://www.qcc.com/" data-date="2021-07-11 17:40">企查查</a></li>
@@ -947,9 +1006,6 @@
     const pwdCancelBtn = document.getElementById('pwdCancelBtn');
     const pwdRemember = document.getElementById('pwdRemember');
 
-    /* 本次会话已解锁的文件夹（key = 文件夹唯一 id，value = 解锁密码） */
-    const unlockedFolders = new Map();
-
     /* 当前正在解锁的文件夹上下文 */
     let currentLock = null;
 
@@ -963,7 +1019,7 @@
       pwdInput.value = '';
       pwdInput.classList.remove('error');
       pwdError.classList.remove('show');
-      pwdRemember.checked = true; // 默认勾选“本次会话记住”
+      pwdRemember.checked = true;
       pwdOverlay.classList.add('show');
       setTimeout(() => pwdInput.focus(), 80);
     }
@@ -1049,9 +1105,6 @@
 
     const recentTitles = getRecentTitles();
 
-    /* 为每个文件夹生成唯一 id */
-    let folderSeq = 0;
-
     // 递归转换
     function convertMenu(ulElement, parentUl) {
       const children = Array.from(ulElement.children);
@@ -1080,14 +1133,13 @@
         const labelDiv = document.createElement('div');
         labelDiv.className = 'node-label';
 
-        /* ---------- 判断文件夹是否加密 ---------- */
+        /* ---------- 判断文件夹是否加密（只读一次，用于后续 DOM 标记） ---------- */
         const folderLockPwd = isFolder ? li.getAttribute('data-lock') : null;
         const isLockedFolder = isFolder && !!folderLockPwd;
 
         if (isLockedFolder) {
           newLi.classList.add('locked-folder');
-          newLi.setAttribute('data-lock-id', 'folder-' + (++folderSeq));
-          // 保存原始密码到 dataset，便于解密后判断/清理
+          // 把密码存到 dataset，后续点击实时读取，避免闭包残留
           newLi.dataset.lockPwd = folderLockPwd;
         }
 
@@ -1095,7 +1147,7 @@
           labelDiv.classList.add('clickable-folder');
           labelDiv.addEventListener('click', (e) => {
             e.stopPropagation();
-            handleFolderClick({ newLi, folderLockPwd, title });
+            handleFolderClick(newLi, title);
           });
           const iconEl = document.createElement('i');
           iconEl.className = 'folder';
@@ -1166,16 +1218,19 @@
     }
 
     /* ============================================================
-       文件夹点击处理：加密则弹密码框，解锁后不再询问
+       文件夹点击处理
+       ------------------------------------------------------------
+       关键：每次点击都实时检查该节点是否仍带有 data-lock-pwd。
+       解密成功后会把 data-lock-pwd 删除，因此后续点击不会弹窗。
     ============================================================ */
-    function handleFolderClick({ newLi, folderLockPwd, title }) {
+    function handleFolderClick(newLi, title) {
       const childUl = newLi.querySelector(':scope > ul');
       if (!childUl) return;
 
-      const lockId = newLi.getAttribute('data-lock-id');
+      const lockPwd = newLi.dataset.lockPwd; // 实时读取（可能已被清空）
 
-      // 已解锁过（本次会话）的加密文件夹，或普通文件夹：直接切换
-      if (!folderLockPwd || unlockedFolders.has(lockId)) {
+      // 没有密码 → 普通文件夹或已解密文件夹：直接切换
+      if (!lockPwd) {
         toggleFolder(newLi);
         return;
       }
@@ -1185,17 +1240,13 @@
         title: '🔐 此文件夹已加密',
         desc: `「${title}」需要密码才能展开`,
         onSuccess: (inputPwd, rememberInSession) => {
-          if (inputPwd !== folderLockPwd) return false;
-          // 密码正确：记录已解锁，清除锁定状态
-          if (rememberInSession) {
-            unlockedFolders.set(lockId, folderLockPwd);
-          }
-          // 无论是否勾选“记住”，本次解锁后都标记为已解锁（颜色不变，仅隐藏锁标记）
-          newLi.classList.add('unlocked');
-          // 清除锁定，后续点击一律走普通文件夹逻辑
+          if (inputPwd !== lockPwd) return false;
+          // 密码正确：清除锁定状态
           newLi.classList.remove('locked-folder');
-          newLi.removeAttribute('data-lock-id');
-          newLi.dataset.lockPwd = '';
+          delete newLi.dataset.lockPwd;
+          // 隐藏锁标记（如果还在）
+          const badge = newLi.querySelector('.lock-badge');
+          if (badge) badge.remove();
           // 展开内容
           childUl.classList.remove('default-collapsed');
           return true;
