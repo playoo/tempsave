@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>书签 · 无限级目录树（文件夹加密）</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #f7f9fc;
+      font-family: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      padding: 2rem 1rem;
+      min-height: 100vh;
+    }
+
+    .bookmark-panel {
+      max-width: 960px;
+      width: 100%;
+      background: #ffffff;
+      border-radius: 24px;
+      box-shadow: 0 20px 40px -12px rgba(0, 20, 30, 0.15), 0 8px 24px -6px rgba(0, 0, 0, 0.05);
+      padding: 2rem 1.5rem 1.8rem;
+    }
+
+    .panel-header {
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-header h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #1a2e3b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-header h1::before {
+      content: '📚';
+      font-size: 2rem;
+      font-weight: 400;
+    }
+
+    .single-category {
+      font-size: 0.9rem;
+      color: #6b7e8d;
+      margin-left: auto;
+      background: #eef3f8;
+      padding: 0.3rem 0.9rem;
+      border-radius: 30px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .search-wrapper {
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.2rem;
+      color: #8a9aa8;
+      pointer-events: none;
+    }
+
+    #searchInput {
+      width: 100%;
+      padding: 0.9rem 1rem 0.9rem 3rem;
+      font-size: 1rem;
+      border: 1.5px solid #d9e2eb;
+      border-radius: 16px;
+      background: #ffffff;
+      outline: none;
+      transition: all 0.15s ease;
+      color: #1f3a4b;
+      font-weight: 450;
+    }
+
+    #searchInput:focus {
+      border-color: #4d8fc5;
+      box-shadow: 0 0 0 4px rgba(77, 143, 197, 0.15);
+      background: #fefeff;
+    }
+
+    #searchInput::placeholder {
+      color: #a5b7c7;
+      font-weight: 400;
+    }
+
+    .tree-container {
+      border-top: 1px solid #e7eef5;
+      padding-top: 1.5rem;
+      margin-top: 0.2rem;
+    }
+
+    .tree-node {
+      list-style: none;
+      position: relative;
+      padding-left: 0;
+    }
+
+    .tree-node ul {
+      list-style: none;
+      margin-left: 0.85rem;
+      padding-left: 0.9rem;
+      position: relative;
+    }
+
+    .tree-node ul::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.5rem;
+      bottom: 0;
+      width: 1.5px;
+      background: #cbdae6;
+      border-radius: 1px;
+      pointer-events: none;
+    }
+
+    .tree-node ul.default-collapsed { display: none; }
+
+    .node-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.3rem 0 0.3rem 0.2rem;
+      border-radius: 10px;
+      transition: background 0.1s ease;
+    }
+
+    .node-row:hover { background: #f2f8ff; }
+
+    .node-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.98rem;
+      color: #1f3a4b;
+      padding: 0.1rem 0;
+      cursor: default;
+      flex: 1;
+      word-break: break-word;
+      font-weight: 450;
+      position: relative;
+    }
+
+    .node-label.clickable-folder { cursor: pointer; user-select: none; }
+    .node-label.clickable-folder:hover .node-name { color: #0f5b8c; }
+
+    .node-label.clickable-bookmark { cursor: pointer; user-select: none; }
+    .node-label.clickable-bookmark:hover { color: #0f5b8c; }
+
+    .clickable-bookmark:hover .node-name {
+      text-decoration: underline;
+      text-decoration-color: #b3d4f0;
+      text-underline-offset: 3px;
+    }
+
+    /* ---------- 文件夹图标 ---------- */
+    .folder {
+      font-size: 1.2rem;
+      line-height: 1;
+      flex-shrink: 0;
+      width: 1.5rem;
+      text-align: center;
+      color: #f1c40f !important;
+      transition: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'FontAwesome';
+      font-style: normal;
+    }
+
+    .folder::before {
+      content: '\f07b';
+    }
+
+    .clickable-folder:hover .folder,
+    .node-label:hover .folder {
+      color: #f1c40f !important;
+    }
+
+    /* ---------- 书签图标 ---------- */
+    .ie {
+      font-size: 1.2rem;
+      line-height: 1;
+      flex-shrink: 0;
+      width: 1.5rem;
+      text-align: center;
+      color: #0078d4;
+      transition: transform 0.1s ease, color 0.1s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'FontAwesome';
+      font-style: normal;
+    }
+
+    .ie::before {
+      content: '\f26b';
+    }
+
+    .clickable-bookmark:hover .ie {
+      transform: scale(1.12);
+      color: #005a9e;
+    }
+
+    /* ---------- 加密文件夹：仅保留锁标记，颜色与普通文件夹一致 ---------- */
+    .lock-badge {
+      font-size: 0.7rem;
+      color: #9b59b6;
+      background: #f4ecf7;
+      border-radius: 20px;
+      padding: 0.05rem 0.45rem;
+      margin-left: 2px;
+      flex-shrink: 0;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .locked-folder.unlocked .lock-badge { display: none; }
+
+    .recent-bookmark .node-name {
+      color: #e67e22;
+      font-weight: 550;
+    }
+
+    .recent-bookmark .node-name:hover {
+      color: #d35400;
+    }
+
+    .recent-bookmark .ie {
+      color: #e67e22;
+    }
+
+    .recent-bookmark .clickable-bookmark:hover .ie {
+      color: #d35400;
+    }
+
+    .recent-bookmark .node-label mark {
+      color: #e67e22;
+      background: #ffe88c;
+    }
+
+    .clickable-folder:hover .node-name { color: #0f5b8c; }
+
+    .node-label mark {
+      background: #ffe88c;
+      color: #1f3a4b;
+      border-radius: 4px;
+      padding: 0.05rem 0.2rem;
+      font-weight: 600;
+    }
+
+    .node-hidden { display: none !important; }
+
+    .no-results-message {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: #8da2b5;
+      font-size: 1rem;
+      font-style: italic;
+      background: #f9fcff;
+      border-radius: 20px;
+      margin-top: 1rem;
+      border: 1px dashed #c8dae9;
+    }
+
+    .tree-footer-note {
+      text-align: right;
+      font-size: 0.75rem;
+      color: #a9bccd;
+      margin-top: 1.8rem;
+      border-top: 1px solid #e3edf6;
+      padding-top: 1rem;
+      letter-spacing: 0.2px;
+    }
+
+    .tree-node ul .node-row { padding-left: 0; }
+
+    .single-category-tag {
+      background: #e2edf9;
+      color: #2f5e85;
+      border-radius: 30px;
+      padding: 0.2rem 0.9rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    .time-tooltip {
+      position: absolute;
+      left: 0;
+      top: 100%;
+      margin-top: 4px;
+      background: #1e2f3d;
+      color: #e3eef8;
+      font-size: 0.75rem;
+      font-weight: 450;
+      padding: 0.3rem 0.7rem;
+      border-radius: 8px;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.15s ease, visibility 0.15s ease;
+      pointer-events: none;
+      z-index: 10;
+      letter-spacing: 0.2px;
+    }
+
+    .time-tooltip::before {
+      content: '';
+      position: absolute;
+      bottom: 100%;
+      left: 12px;
+      border: 5px solid transparent;
+      border-bottom-color: #1e2f3d;
+    }
+
+    .node-label:hover .time-tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .tree-node ul .time-tooltip { left: 4px; }
+    .tree-node ul .time-tooltip::before { left: 8px; }
+
+    .new-window-hint {
+      font-size: 0.6rem;
+      opacity: 0;
+      margin-left: 2px;
+      color: #5e7e9c;
+      flex-shrink: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .clickable-bookmark:hover .new-window-hint { opacity: 0.7; }
+
+    /* ==================== 文件夹密码弹窗 ==================== */
+    .pwd-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 30, 45, 0.42);
+      backdrop-filter: blur(3px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1.5rem;
+      z-index: 2000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+    }
+
+    .pwd-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .pwd-card {
+      max-width: 380px;
+      width: 100%;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 24px 48px -12px rgba(0, 20, 30, 0.35);
+      padding: 1.8rem 1.6rem 1.5rem;
+      text-align: center;
+      animation: pwdIn 0.28s ease;
+    }
+
+    @keyframes pwdIn {
+      from { transform: translateY(16px) scale(0.98); opacity: 0; }
+      to   { transform: translateY(0) scale(1);       opacity: 1; }
+    }
+
+    .pwd-icon {
+      font-size: 2rem;
+      line-height: 1;
+      margin-bottom: 0.6rem;
+    }
+
+    .pwd-card h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1a2e3b;
+      margin-bottom: 0.35rem;
+      word-break: break-word;
+    }
+
+    .pwd-card p {
+      font-size: 0.83rem;
+      color: #6b7e8d;
+      margin-bottom: 1rem;
+      line-height: 1.5;
+      word-break: break-all;
+    }
+
+    .pwd-input {
+      width: 100%;
+      padding: 0.75rem 0.9rem;
+      font-size: 0.95rem;
+      border: 1.5px solid #d9e2eb;
+      border-radius: 12px;
+      outline: none;
+      color: #1f3a4b;
+      background: #ffffff;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      letter-spacing: 0.06em;
+    }
+
+    .pwd-input:focus {
+      border-color: #9b59b6;
+      box-shadow: 0 0 0 4px rgba(155, 89, 182, 0.15);
+    }
+
+    .pwd-input.error {
+      border-color: #e74c3c;
+      box-shadow: 0 0 0 4px rgba(231, 76, 60, 0.12);
+    }
+
+    .pwd-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 1rem;
+    }
+
+    .pwd-btn {
+      flex: 1;
+      padding: 0.7rem 1rem;
+      font-size: 0.92rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: filter 0.15s ease, transform 0.1s ease;
+    }
+
+    .pwd-btn-primary {
+      color: #ffffff;
+      background: linear-gradient(135deg, #9b59b6, #7d3c98);
+    }
+
+    .pwd-btn-primary:hover { filter: brightness(1.07); }
+    .pwd-btn-primary:active { transform: scale(0.98); }
+
+    .pwd-btn-secondary {
+      color: #5b6f80;
+      background: #eef3f8;
+      flex: 0 0 auto;
+      padding-left: 1.2rem;
+      padding-right: 1.2rem;
+    }
+
+    .pwd-btn-secondary:hover { background: #e2ebf3; }
+    .pwd-btn-secondary:active { transform: scale(0.98); }
+
+    .pwd-error {
+      display: none;
+      margin-top: 0.6rem;
+      font-size: 0.8rem;
+      color: #e74c3c;
+      font-weight: 500;
+    }
+
+    .pwd-error.show { display: block; }
+
+    .pwd-shake {
+      animation: pwdShake 0.4s ease;
+    }
+
+    @keyframes pwdShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-7px); }
+      40% { transform: translateX(7px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    .pwd-remember {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 0.9rem;
+      font-size: 0.78rem;
+      color: #7b8ea0;
+      user-select: none;
+    }
+
+    .pwd-remember input {
+      width: 14px;
+      height: 14px;
+      accent-color: #9b59b6;
+      cursor: pointer;
+    }
+
+    .pwd-remember label { cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<!-- ==================== 主书签面板 ==================== -->
+<div class="bookmark-panel">
+  <div class="panel-header">
+    <h1>书签</h1>
+    <span class="single-category single-category-tag">📁 收藏夹栏</span>
+  </div>
+
+  <div class="search-wrapper">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="搜索书签... (支持无限层级)" autocomplete="off">
+  </div>
+
+  <div class="tree-container" id="treeContainer">
+    <div id="rootList"></div>
+    <div id="noResults" class="no-results-message" style="display: none;">没有找到匹配的书签</div>
+  </div>
+  <div class="tree-footer-note">⚡ 无限级 · 静态书签 · 支持文件夹加密</div>
+</div>
+
+<!-- ==================== 文件夹密码弹窗 ==================== -->
+<div class="pwd-overlay" id="pwdOverlay">
+  <div class="pwd-card" id="pwdCard">
+    <div class="pwd-icon">🔐</div>
+    <h3 id="pwdTitle">此文件夹已加密</h3>
+    <p id="pwdDesc">请输入密码后展开</p>
+    <input type="password" id="pwdInput" class="pwd-input" placeholder="请输入密码" autocomplete="off">
+    <div class="pwd-actions">
+      <button class="pwd-btn pwd-btn-secondary" id="pwdCancelBtn">取消</button>
+      <button class="pwd-btn pwd-btn-primary" id="pwdSubmitBtn">解锁并展开</button>
+    </div>
+    <div class="pwd-error" id="pwdError">密码错误，请重试</div>
+    <div class="pwd-remember">
+      <input type="checkbox" id="pwdRemember" checked>
+      <label for="pwdRemember">本次会话记住此文件夹密码（不再询问）</label>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ★★★ 数据区（直接放 ul.menu）★★★
+     要加密文件夹，给文件夹的 <li> 添加 data-lock="密码" 属性，例如：
+     <li data-lock="123456"><i class="folder"></i><span>加密文件夹</span>
+       <ul class="menu">...</ul>
+     </li>
+     未加 data-lock 的文件夹和书签保持原有行为。
+================================================================ -->
+<div id="bookmark-source" style="display:none;">
+
+  <ul class="menu">
+    <li><i class="folder"></i><span>01 产品运营</span>
+      <ul class="menu">
+        <!-- ★ 示例：加密文件夹（密码 123456） -->
+        <li data-lock="123456"><i class="folder"></i><span>自媒体平台（加密）</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://mp.weixin.qq.com/" data-date="2019-02-11 15:41">公众号</a></li>
+            <li><i class="ie"></i><a href="https://weibo.com/runningcheese/" data-date="2019-02-11 15:41">微博</a></li>
+            <li><i class="ie"></i><a href="https://zhuanlan.zhihu.com/methodology" data-date="2019-02-11 15:41">知乎</a></li>
+            <li><i class="ie"></i><a href="https://member.bilibili.com/v2#/upload/text/edit" data-date="2019-02-11 15:41">Bilibili</a></li>
+            <li><i class="ie"></i><a href="https://post.smzdm.com/tougao/" data-date="2019-12-13 23:08">什么值得买</a></li>
+            <li><i class="ie"></i><a href="https://sspai.com/" data-date="2019-02-11 15:41">少数派</a></li>
+            <li><i class="ie"></i><a href="https://www.yinxiang.com/everhub/personal/qhEvvFTtY_b9NMPv5M74Ww" data-date="2020-11-27 16:13">印象识堂</a></li>
+            <li><i class="ie"></i><a href="http://www.woshipm.com/" data-date="2020-06-19 23:00">人人都是产品经理</a></li>
+            <li><i class="ie"></i><a href="https://user.guancha.cn/" data-date="2021-04-25 12:35">风闻社区</a></li>
+            <li><i class="ie"></i><a href="https://www.jianshu.com/c/4d784681a767" data-date="2019-02-11 15:41">简书</a></li>
+            <li><i class="ie"></i><a href="https://www.douban.com/people/runningcheese/notes" data-date="2019-02-11 15:41">豆瓣</a></li>
+            <li><i class="ie"></i><a href="https://mp.toutiao.com/profile_v4/index" data-date="2019-02-11 15:41">头条号（5篇）</a></li>
+            <li><i class="ie"></i><a href="https://baijiahao.baidu.com/" data-date="2019-02-11 15:41">百家号（1篇）</a></li>
+            <li><i class="ie"></i><a href="http://mp.163.com/index.html#/index?wemediaId=W133612618029907266" data-date="2019-02-11 15:41">网易号（6篇）</a></li>
+            <li><i class="ie"></i><a href="https://om.qq.com/userAuth/index" data-date="2019-02-11 15:41">企鹅号（3篇）</a></li>
+            <li><i class="ie"></i><a href="https://mp.sohu.com/mpfe/v3/main/first/page" data-date="2019-02-11 15:41">搜狐号</a></li>
+            <li><i class="ie"></i><a href="https://mp.dayu.com/dashboard/contents" data-date="2019-02-11 15:41">大鱼号</a></li>
+          </ul>
+        </li>
+        <li><i class="folder"></i><span>视频自媒体</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://link.bilibili.com/p/center/index#/user-center/my-info/operation" data-date="2021-07-14 20:53">Bilibili</a></li>
+            <li><i class="ie"></i><a href="https://member.bilibili.com/platform/upload/video/frame" data-date="2021-07-14 21:04">Bilibili 直播</a></li>
+            <li><i class="ie"></i><a href="https://v.qq.com/cm/upload/index.html" data-date="2021-07-14 21:02">腾讯号</a></li>
+            <li><i class="ie"></i><a href="https://mp.iqiyi.com/#noAuth" data-date="2021-07-14 20:50">爱奇艺号</a></li>
+            <li><i class="ie"></i><a href="https://studio.ixigua.com/upload" data-date="2021-07-14 21:09">西瓜视频</a></li>
+            <li><i class="ie"></i><a href="https://dream.haokan.com/author" data-date="2021-07-14 21:10">好看视频</a></li>
+            <li><i class="ie"></i><a href="https://channels.weixin.qq.com/index" data-date="2021-07-14 21:28">视频号</a></li>
+            <li><i class="ie"></i><a href="https://creator.douyin.com/creator-micro/home" data-date="2021-07-14 20:56">抖音号</a></li>
+            <li><i class="ie"></i><a href="https://cp.kuaishou.com/article/publish/video" data-date="2021-07-14 20:55">快手号</a></li>
+            <li><i class="ie"></i><a href="https://creator.xiaohongshu.com/creator/home" data-date="2021-07-14 21:37">小红书</a></li>
+            <li><i class="ie"></i><a href="https://creator.miaopai.com/" data-date="2021-07-14 21:02">秒拍号</a></li>
+            <li><i class="ie"></i><a href="https://mp.dayu.com/dashboard/index" data-date="2021-07-14 21:40">大鱼号</a></li>
+            <li><i class="ie"></i><a href="https://www.douyu.com/member" data-date="2021-07-14 21:06">斗鱼</a></li>
+            <li><i class="ie"></i><a href="https://i.huya.com/" data-date="2021-07-14 21:08">虎牙</a></li>
+            <li><i class="ie"></i><a href="https://studio.ximalaya.com/" data-date="2021-07-14 21:07">喜马拉雅</a></li>
+            <li><i class="ie"></i><a href="https://studio.youtube.com/channel/" data-date="2021-07-14 21:11">YouTube Studio</a></li>
+            <li><i class="ie"></i><a href="https://www.tiktok.com/upload" data-date="2021-07-14 21:14">TikTok Upload</a></li>
+            <li><i class="ie"></i><a href="https://www.instagram.com/" data-date="2021-07-14 21:18">Instagram</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><i class="folder"></i><span>02 新闻资讯</span>
+      <ul class="menu">
+        <!-- ★ 示例：加密子文件夹（密码 abc123） -->
+        <li data-lock="abc123"><i class="folder"></i><span>今日看点（加密）</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2020-10-09 01:24">────国内榜────</a></li>
+            <li><i class="ie"></i><a href="https://tophub.today/" data-date="2019-04-21 17:02">今日热榜</a></li>
+            <li><i class="ie"></i><a href="https://make.mk/" data-date="2019-09-28 16:08">MAKE</a></li>
+            <li><i class="ie"></i><a href="https://www.anyknew.com/#/" data-date="2019-02-11 15:41">AnyKnew</a></li>
+            <li><i class="ie"></i><a href="https://the.top/frame/list/0" data-date="2020-10-14 12:09">拓扑排行榜</a></li>
+            <li><i class="ie"></i><a href="https://mo.fish/" data-date="2019-10-30 22:42">鱼塘热榜</a></li>
+            <li><i class="ie"></i><a href="https://www.re-bang.com/" data-date="2019-11-15 22:14">今日热榜</a></li>
+            <li><i class="ie"></i><a href="https://duomoyu.com/" data-date="2020-10-13 19:26">多摸鱼</a></li>
+            <li><i class="ie"></i><a href="https://news.bicido.com/#/" data-date="2020-10-13 19:29">哔哔资讯官网</a></li>
+            <li><i class="ie"></i><a href="http://guozhivip.com/rank/" data-date="2020-10-06 14:15">果汁排行榜</a></li>
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2020-10-09 01:23">────国外榜────</a></li>
+            <li><i class="ie"></i><a href="https://sciurls.com/" data-date="2019-05-07 10:58">SciURLs</a></li>
+            <li><i class="ie"></i><a href="https://techurls.com/" data-date="2019-05-07 10:58">TechURLs</a></li>
+            <li><i class="ie"></i><a href="https://devurls.com/" data-date="2019-05-07 10:58">DevURLs</a></li>
+            <li><i class="ie"></i><a href="https://tophub.fun/#/?id=1" data-date="2019-09-28 16:07">今日热榜</a></li>
+            <li><i class="ie"></i><a href="https://www.printf520.com/hot.html" data-date="2019-09-28 16:08">每日简报</a></li>
+          </ul>
+        </li>
+        <li><i class="folder"></i><span>社交网站</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2020-10-11 20:38">────国内网站────</a></li>
+            <li><i class="ie"></i><a href="https://weibo.com/" data-date="2019-02-11 15:41">微博</a></li>
+            <li><i class="ie"></i><a href="https://wx.qq.com/" data-date="2019-02-11 15:41">微信网页版</a></li>
+            <li><i class="ie"></i><a href="https://weixin.sogou.com/" data-date="2019-02-11 15:41">微信搜索</a></li>
+            <li><i class="ie"></i><a href="https://www.guokr.com/" data-date="2019-02-11 15:41">果壳</a></li>
+            <li><i class="ie"></i><a href="https://www.douban.com/" data-date="2019-02-11 15:41">豆瓣</a></li>
+            <li><i class="ie"></i><a href="https://www.zhihu.com/" data-date="2019-02-11 15:41">知乎</a></li>
+            <li><i class="ie"></i><a href="https://www.jianshu.com/" data-date="2019-02-11 15:41">简书</a></li>
+            <li><i class="ie"></i><a href="https://tieba.baidu.com/index.html" data-date="2019-02-11 15:41">贴吧</a></li>
+            <li><i class="ie"></i><a href="https://www.toutiao.com/" data-date="2020-10-15 18:29">今日头条</a></li>
+            <li><i class="ie"></i><a href="https://i.qq.com/" data-date="2021-02-17 11:27">QQ空间</a></li>
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2020-10-11 20:37">────国外网站────</a></li>
+            <li><i class="ie"></i><a href="https://www.quora.com/" data-date="2019-02-11 15:41">Quora</a></li>
+            <li><i class="ie"></i><a href="https://twitter.com/" data-date="2019-02-11 15:41">Twitter</a></li>
+            <li><i class="ie"></i><a href="https://www.reddit.com/" data-date="2019-02-11 15:41">Reddit</a></li>
+            <li><i class="ie"></i><a href="https://www.tumblr.com/" data-date="2019-02-11 15:41">Tumblr ▲</a></li>
+            <li><i class="ie"></i><a href="https://www.pinterest.com/" data-date="2020-04-14 19:29">Pinterest</a></li>
+            <li><i class="ie"></i><a href="https://medium.com/" data-date="2019-02-11 15:41">Medium ▲</a></li>
+            <li><i class="ie"></i><a href="https://www.facebook.com/" data-date="2019-02-11 15:41">Facebook</a></li>
+            <li><i class="ie"></i><a href="https://www.linkedin.com/" data-date="2019-02-11 15:41">LinkedIn</a></li>
+            <li><i class="ie"></i><a href="https://www.instagram.com/" data-date="2019-02-11 15:41">Instagram</a></li>
+            <li><i class="ie"></i><a href="https://web.telegram.org/#/im" data-date="2019-02-11 15:41">Telegram</a></li>
+            <li><i class="ie"></i><a href="https://tweetdeck.twitter.com/" data-date="2019-12-24 20:44">TweetDeck</a></li>
+          </ul>
+        </li>
+        <li><i class="folder"></i><span>问答网站</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2019-02-11 15:41">────传统问答────</a></li>
+            <li><i class="ie"></i><a href="https://zhidao.baidu.com/" data-date="2019-02-11 15:41">百度知道</a></li>
+            <li><i class="ie"></i><a href="https://jingyan.baidu.com/" data-date="2019-02-11 15:41">百度经验</a></li>
+            <li><i class="ie"></i><a href="https://wenwen.sogou.com/" data-date="2019-02-11 15:41">搜狗问问</a></li>
+            <li><i class="ie"></i><a href="https://www.daandaan.com/" data-date="2019-11-16 19:20">答案答案</a></li>
+            <li><i class="ie"></i><a href="https://www.diffen.com/" data-date="2020-10-02 21:46">Diffen</a></li>
+            <li><i class="ie"></i><a href="https://www.wikihow.com/Main-Page" data-date="2019-02-11 15:41">wikiHow</a></li>
+            <li><i class="ie"></i><a href="https://zh.wikihow.com/%E9%A6%96%E9%A1%B5" data-date="2019-02-11 15:41">WikiHow中文</a></li>
+            <li><i class="ie"></i><a href="https://www.answers.com/" data-date="2019-02-11 15:41">Answers</a></li>
+            <li><i class="ie"></i><a href="https://answers.yahoo.com/" data-date="2019-02-11 15:41">Yahoo Answers</a></li>
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2019-02-11 15:41">────社会化问答───</a></li>
+            <li><i class="ie"></i><a href="https://www.zhihu.com/" data-date="2019-02-11 15:41">知乎</a></li>
+            <li><i class="ie"></i><a href="https://www.quora.com/" data-date="2019-02-11 15:41">Quora</a></li>
+            <li><i class="ie"></i><a href="https://stackexchange.com/" data-date="2019-02-11 15:41">Stack Exchange</a></li>
+            <li><i class="ie"></i><a href="http://www.wufafuwu.com/a/ONE_wenda/" data-date="2019-02-11 15:41">ONE问答</a></li>
+            <li><i class="ie"></i><a href="https://www.wukong.com/" data-date="2019-02-11 15:41">悟空问答</a></li>
+            <li><i class="ie"></i><a href="https://qa.cnki.net/web/" data-date="2021-02-08 19:21">知网随问</a></li>
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2019-02-11 15:41">────付费问答────</a></li>
+            <li><i class="ie"></i><a href="https://www.zhihu.com/lives/" data-date="2019-02-11 15:41">知乎 Live</a></li>
+            <li><i class="ie"></i><a href="https://fd.zaih.com/" data-date="2019-02-11 15:41">在行一点</a></li>
+            <li><i class="ie"></i><a href="https://www.igetget.com/" data-date="2019-02-11 15:41">得到</a></li>
+            <li><i class="ie"></i><a href="https://www.weibo.com/ttwenda?profile_ftype=1&amp;is_all=1#_0" data-date="2019-02-11 15:41">微博问答</a></li>
+            <li><i class="ie"></i><a href="https://www.zsxq.com/" data-date="2019-02-11 15:41">知识星球</a></li>
+            <li><i class="ie"></i><a href="https://www.runningcheese.com/qna" data-date="2019-02-11 15:41">使用介绍</a></li>
+          </ul>
+        </li>
+        <li><i class="folder"></i><span>RSS阅读</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://feeder.co/reader" data-date="2019-02-11 15:41">Feeder.co ▲</a></li>
+            <li><i class="ie"></i><a href="https://www.inoreader.com/" data-date="2019-02-11 15:41">Inoreader ▲</a></li>
+            <li><i class="ie"></i><a href="https://feedly.com/i/welcome" data-date="2019-02-11 15:41">Feedly ▲</a></li>
+            <li><i class="ie"></i><a href="https://feedly.com/i/discover" data-date="2019-02-11 15:41">Feedly Discover▲</a></li>
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2020-10-19 00:53">────────────────</a></li>
+            <li><i class="ie"></i><a href="https://docs.rsshub.app/" data-date="2019-02-11 15:41">RSSHub</a></li>
+            <li><i class="ie"></i><a href="https://datatube.dev/cn" data-date="2020-11-04 18:40">Datatube.dev</a></li>
+            <li><i class="ie"></i><a href="http://feed43.com/" data-date="2019-02-11 15:41">Feed43.com</a></li>
+            <li><i class="ie"></i><a href="https://feedity.com/" data-date="2019-02-11 15:41">Feedity.com</a></li>
+            <li><i class="ie"></i><a href="https://createfeed.fivefilters.org/" data-date="2019-02-11 15:41">FiveFilters.org</a></li>
+            <li><i class="ie"></i><a href="https://feedex.net/" data-date="2019-02-11 15:41">FeedEx.Net</a></li>
+            <li><i class="ie"></i><a href="http://fetchrss.com/" data-date="2019-05-06 20:02">FetchRSS</a></li>
+            <li><i class="ie"></i><a href="https://www.youtube.com/subscription_manager" data-date="2020-10-14 16:03">YouTube 订阅管理器</a></li>
+            <li><i class="ie"></i><a href="https://www.runningcheese.com/rss-feed" data-date="2019-02-11 15:41">RSS使用手册</a></li>
+          </ul>
+        </li>
+        <li><i class="folder"></i><span>综合新闻</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://news.google.com/search?q={searchTerms}&amp;hl=zh-CN&amp;gl=CN&amp;ceid=CN:zh-Hans" data-date="2019-02-11 15:41">谷歌新闻</a></li>
+            <li><i class="ie"></i><a href="https://news.163.com/" data-date="2019-02-11 15:41">网易新闻</a></li>
+            <li><i class="ie"></i><a href="https://news.qq.com/" data-date="2019-02-11 15:41">腾讯新闻</a></li>
+            <li><i class="ie"></i><a href="https://www.ifeng.com/" data-date="2019-02-11 15:41">凤凰新闻</a></li>
+            <li><i class="ie"></i><a href="http://gz.bendibao.com/" data-date="2019-02-11 15:41">本地宝</a></li>
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2020-10-19 00:54">───────────────</a></li>
+            <li><i class="ie"></i><a href="http://www.people.com.cn/" data-date="2020-08-18 17:10">人民日报</a></li>
+            <li><i class="ie"></i><a href="https://www.guancha.cn/" data-date="2020-02-15 00:59">观察者网</a></li>
+            <li><i class="ie"></i><a href="https://www.jiemian.com/" data-date="2021-06-10 15:30">界面新闻</a></li>
+            <li><i class="ie"></i><a href="https://www.thepaper.cn/" data-date="2019-02-11 15:41">澎湃新闻</a></li>
+            <li><i class="ie"></i><a href="http://www.infzm.com/" data-date="2021-02-17 11:21">南方周末</a></li>
+            <li><i class="ie"></i><a href="https://www.myzaker.com/" data-date="2021-07-11 17:25">ZAKER新闻</a></li>
+            <li><i class="ie"></i><a href="https://www.dwnews.com/" data-date="2019-08-14 23:03">多维新闻网</a></li>
+          </ul>
+        </li>
+        <li><i class="folder"></i><span>海外新闻</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://www.bbc.com/" data-date="2019-02-11 15:41">英国 - BBC</a></li>
+            <li><i class="ie"></i><a href="https://www.bbc.com/zhongwen/simp" data-date="2020-08-18 17:03">英国 - BBC 中文</a></li>
+            <li><i class="ie"></i><a href="https://www.economist.com/" data-date="2019-02-11 15:41">英国 - 经济学人</a></li>
+            <li><i class="ie"></i><a href="https://www.ft.com/" data-date="2019-02-11 15:41">英国 - 金融时报</a></li>
+            <li><i class="ie"></i><a href="http://www.ftchinese.com/" data-date="2019-02-11 15:41">英国 - 金融时报中文网</a></li>
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2020-10-19 00:54">────────────────</a></li>
+            <li><i class="ie"></i><a href="https://edition.cnn.com/" data-date="2019-02-11 15:41">美国 - CNN</a></li>
+            <li><i class="ie"></i><a href="https://www.nytimes.com/" data-date="2020-08-18 17:06">美国 - 纽约时报</a></li>
+            <li><i class="ie"></i><a href="https://cn.nytimes.com/" data-date="2020-08-18 17:07">美国 - 纽约时报中文网</a></li>
+            <li><i class="ie"></i><a href="https://www.wsj.com/" data-date="2020-08-18 17:05">美国 - 华尔街日报</a></li>
+            <li><i class="ie"></i><a href="https://cn.wsj.com/" data-date="2020-08-18 17:05">美国 - 华尔街日报中文网</a></li>
+            <li><i class="ie"></i><a href="https://www.washingtonpost.com/" data-date="2020-10-24 14:53">美国 - 华盛顿邮报</a></li>
+            <li><i class="ie"></i><a href="https://www.foxnews.com/" data-date="2020-10-24 14:41">美国 - Fox News</a></li>
+            <li><i class="ie"></i><a href="https://time.com/" data-date="2021-02-17 11:16">美国 - 时代周刊</a></li>
+            <li><i class="ie"></i><a href="https://www.hk01.com/" data-date="2020-08-18 17:07">香港 - 香港01</a></li>
+            <li><i class="ie"></i><a href="https://www.zaobao.com/" data-date="2020-08-18 16:59">新加坡 - 联合早报</a></li>
+            <li><i class="ie"></i><a href="https://www.rt.com/" data-date="2021-02-17 11:14">俄国 - RT</a></li>
+            <li><i class="ie"></i><a href="http://www.chinadaily.com.cn/" data-date="2021-02-17 11:17">中国 - 中国日报</a></li>
+            <li><i class="ie"></i><a href="https://www.globaltimes.cn/" data-date="2021-02-17 11:18">中国 - 环球时报</a></li>
+            <li><i class="ie"></i><a href="https://www.cgtn.com/" data-date="2021-02-17 11:18">中国 - CGTN</a></li>
+          </ul>
+        </li>
+        <li><i class="folder"></i><span>图解新闻</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2019-02-11 15:41">─────图解新闻─────</a></li>
+            <li><i class="ie"></i><a href="http://roll.news.sina.com.cn/chart/index.shtml" data-date="2019-02-11 15:41">图解天下</a></li>
+            <li><i class="ie"></i><a href="https://news.qq.com/newspedia/all.htm" data-date="2019-02-11 15:41">新闻百科</a></li>
+            <li><i class="ie"></i><a href="https://data.163.com/special/datablog/" data-date="2019-02-11 15:41">网易数读</a></li>
+            <li><i class="ie"></i><a href="http://mp.sohu.com/profile?xpt=NzJCMERBNUNDN0NEODJBOTkwMTZFMkM2NkU3REM3QjBAcXEuc29odS5jb20=" data-date="2019-02-11 15:41">数字之道</a></li>
+            <li><i class="ie"></i><a href="http://opinion.people.com.cn/GB/364827/index.html" data-date="2019-02-11 15:41">图解新闻</a></li>
+            <li><i class="ie"></i><a href="http://www.xinhuanet.com/datanews/xxt.htm" data-date="2019-02-11 15:41">数据新闻</a></li>
+            <li><i class="ie"></i><a href="http://finance.ifeng.com/listpage/finance-1318-1354-/1/spelist.shtml" data-date="2019-02-11 15:41">财经连环话</a></li>
+            <li><i class="ie"></i><a href="http://www.nbd.com.cn/columns/442" data-date="2019-02-11 15:41">图数馆</a></li>
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2019-02-11 15:41">─────图解知识点────</a></li>
+            <li><i class="ie"></i><a href="https://baike.baidu.com/vbaike" data-date="2019-02-11 15:41">V 百科</a></li>
+            <li><i class="ie"></i><a href="https://informationisbeautiful.net/" data-date="2019-02-11 15:41">Information is Beautiful</a></li>
+            <li><i class="ie"></i><a href="https://www.dailyinfographic.com/" data-date="2019-02-11 15:41">Daily Infographic</a></li>
+            <li><i class="ie"></i><a href="https://www.best-infographics.com/" data-date="2019-02-11 15:41">Best Infographics</a></li>
+            <li><i class="ie"></i><a href="https://www.visualcapitalist.com/" data-date="2019-02-11 15:41">Visual Capitalist</a></li>
+            <li><i class="ie"></i><a href="http://www.199it.com/archives/category/info-graphics" data-date="2019-02-11 15:41">199IT</a></li>
+            <li><i class="ie"></i><a href="https://www.pingwest.com/Pingraphic" data-date="2021-07-14 15:08">品玩 PinGraphic</a></li>
+            <li><i class="ie"></i><a href="https://www.zcool.com.cn/u/14755131" data-date="2021-07-09 17:39">赛雷三分钟</a></li>
+            <li><i class="ie"></i><a href="http://mp.sohu.com/profile?xpt=aGV5LXN0b25lQHNvaHUuY29t&amp;_f=index_pagemp_1" data-date="2019-02-11 15:41">二混子Stone</a></li>
+          </ul>
+        </li>
+        <li><i class="folder"></i><span>热搜榜</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2020-10-06 15:15">────热搜榜────</a></li>
+            <li><i class="ie"></i><a href="https://s.weibo.com/top/summary?cate=homepage" data-date="2019-02-11 15:41">微博热搜榜</a></li>
+            <li><i class="ie"></i><a href="https://top.baidu.com/board" data-date="2019-02-11 15:41">百度热搜</a></li>
+            <li><i class="ie"></i><a href="https://trends.zhiweidata.com/" data-date="2020-10-11 23:22">知微舆论场</a></li>
+            <li><i class="ie"></i><a href="https://www.wrd.cn/login.shtml" data-date="2020-10-13 20:13">微热点</a></li>
+            <li><i class="ie"></i><a href="https://ef.zhiweidata.com/" data-date="2019-02-11 15:41">知微事见</a></li>
+            <li><i class="ie"></i><a href="https://houxu.app/" data-date="2021-07-05 22:20">后续</a></li>
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2020-10-11 23:16">────热议榜────</a></li>
+            <li><i class="ie"></i><a href="https://www.zhihu.com/billboard" data-date="2020-08-31 21:31">知乎热榜</a></li>
+            <li><i class="ie"></i><a href="https://www.zhihu.com/roundtable" data-date="2019-02-11 15:41">知乎圆桌</a></li>
+            <li><i class="ie"></i><a href="https://www.zhihu.com/topic/19776749/top-answers" data-date="2019-02-11 15:41">知乎「根话题」</a></li>
+            <li><i class="ie"></i><a href="https://kanzhihu.pro/" data-date="2019-02-11 15:41">看知乎</a></li>
+            <li><i class="ie"></i><a href="http://www.zhihufans.com/" data-date="2019-02-11 15:41">知乎封神榜</a></li>
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2021-06-27 20:11">────────────────</a></li>
+            <li><i class="ie"></i><a href="https://zhidao.baidu.com/daily" data-date="2019-02-11 15:41">知道日报</a></li>
+            <li><i class="ie"></i><a href="http://tieba.baidu.com/hottopic/browse/topicList?res_type=1" data-date="2020-10-06 15:23">贴吧热议榜单</a></li>
+            <li><i class="ie"></i><a href="https://bbs.hupu.com/" data-date="2020-10-06 16:23">虎扑社区热帖</a></li>
+            <li><i class="ie"></i><a href="https://post.smzdm.com/hot_1/" data-date="2020-10-06 16:37">什么值得买热门</a></li>
+            <li><i class="ie"></i><a href="http://redditlist.com/" data-date="2020-11-13 19:13">Reddit List</a></li>
+            <li><i class="ie"></i><a href="https://redditlist.io/" data-date="2021-07-10 09:53">Reddit List ▲</a></li>
+            <li><i class="ie"></i><a href="https://tbd.wshang.com/home" data-date="2020-10-15 18:38">淘宝淘榜单</a></li>
+            <li><i class="ie"></i><a href="https://www.mktindex.com/home/" data-date="2019-02-11 15:41">电商魔镜</a></li>
+          </ul>
+        </li>
+        <li><i class="folder"></i><span>公号榜</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="http://www.gsdata.cn/" data-date="2019-02-11 15:41">清博大数据</a></li>
+            <li><i class="ie"></i><a href="http://data.aiweibang.com/" data-date="2021-07-09 18:46">爱微帮公众号数据</a></li>
+            <li><i class="ie"></i><a href="https://data.xiguaji.com/" data-date="2019-02-11 15:41">西瓜自媒体数据</a></li>
+            <li><i class="ie"></i><a href="https://www.cimidata.com/rank" data-date="2020-10-13 20:16">次幂数据</a></li>
+            <li><i class="ie"></i><a href="https://www.kolrank.com/" data-date="2020-10-13 19:18">KolRank 大数据</a></li>
+            <li><i class="ie"></i><a href="https://www.newrank.cn/public/info/list.html" data-date="2019-02-11 15:41">新榜自媒体数据</a></li>
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2021-07-09 18:48">────────────────</a></li>
+            <li><i class="ie"></i><a href="https://wx.qnmlgb.tech/" data-date="2019-11-17 12:51">瓦斯阅读</a></li>
+          </ul>
+        </li>
+        <li><i class="folder"></i><span>视频榜</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://www.bilibili.com/ranking" data-date="2020-02-11 18:31">B站排行榜</a></li>
+            <li><i class="ie"></i><a href="https://www.bilibili.com/v/popular/weekly" data-date="2020-10-05 13:41">B站每周必看</a></li>
+            <li><i class="ie"></i><a href="https://www.bilibili.com/read/ranking#type=3" data-date="2020-10-06 16:35">B站专栏排行</a></li>
+            <li><i class="ie"></i><a href="https://www.bilibili.com/h5/good-history" data-date="2020-10-10 12:09">B站入站必刷</a></li>
+            <li><i class="ie"></i><a href="https://www.bilibili.com/v/channel/" data-date="2020-10-26 00:35">B站发现频道</a></li>
+            <li><i class="ie"></i><a href="https://www.kanbilibili.com/rank/ups/fans" data-date="2020-10-05 20:17">B站UP主榜</a></li>
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2021-07-13 09:11">────────────────</a></li>
+            <li><i class="ie"></i><a href="https://www.douyu.com/directory/rank_list/PCgame" data-date="2021-06-27 20:08">斗鱼排行榜</a></li>
+            <li><i class="ie"></i><a href="https://v.qq.com/biu/ranks/?t=hotsearch" data-date="2020-10-07 13:58">全网影视排行榜</a></li>
+            <li><i class="ie"></i><a href="https://www.iqiyi.com/ranks/hotsearch" data-date="2021-07-09 19:09">爱奇艺风云榜</a></li>
+            <li><i class="ie"></i><a href="https://www.youtube.com/feed/trending#0" data-date="2020-10-10 12:15">YouTube 时下流行</a></li>
+            <li><i class="ie"></i><a href="https://www.noxinfluencer.com/" data-date="2020-10-14 22:15">YouTube 网红排行榜 ▲</a></li>
+            <li><i class="ie"></i><a href="https://cn.noxinfluencer.com/" data-date="2020-10-14 22:15">Youtube 网红排行榜 CN ▲</a></li>
+            <li><i class="ie"></i><a href="https://socialblade.com/" data-date="2020-10-24 14:12">SocialBlade 大数据 ▲</a></li>
+          </ul>
+        </li>
+        <li><i class="folder"></i><span>短视频榜</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://xd.newrank.cn/data/" data-date="2020-10-15 23:55">新抖</a></li>
+            <li><i class="ie"></i><a href="https://www.doudouxia.com/industry/video" data-date="2020-10-07 14:20">抖抖侠</a></li>
+            <li><i class="ie"></i><a href="https://dy.feigua.cn/rank/tag/0/day/20210629.html?chl=feigua2" data-date="2021-06-30 09:35">飞瓜数据</a></li>
+            <li><i class="ie"></i><a href="https://www.caasdata.com/index/index/index.html" data-date="2020-10-15 18:36">卡思数据</a></li>
+            <li><i class="ie"></i><a href="https://toobigdata.com/" data-date="2020-10-15 23:54">TooBigData</a></li>
+            <li><i class="ie"></i><a href="https://ksbang.top/" data-date="2020-10-15 18:27">快手排行榜</a></li>
+            <li><i class="ie"></i><a href="https://www.xiaohulu.com/" data-date="2021-07-05 22:17">小葫芦大数据</a></li>
+            <li><i class="ie"></i><a href="http://www.toubang.tv/" data-date="2021-07-05 22:18">头榜数据</a></li>
+            <li><i class="ie"></i><a href="https://www.chanmama.com/" data-date="2021-07-05 22:27">蝉妈妈</a></li>
+            <li><i class="ie"></i><a href="http://www.iresearch.tv/research/anchor/data/barrage" data-date="2021-07-13 09:46">直播观察</a></li>
+          </ul>
+        </li>
+        <li><i class="folder"></i><span>搜索指数</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://index.baidu.com/v2/index.html#/" data-date="2019-02-11 15:41">百度指数</a></li>
+            <li><i class="ie"></i><a href="https://data.weibo.com/index" data-date="2019-02-11 15:41">微博指数</a></li>
+            <li><i class="ie"></i><a href="https://trends.google.com/trends/?geo=US" data-date="2019-02-11 15:41">谷歌趋势</a></li>
+            <li><i class="ie"></i><a href="http://zhishu.sogou.com/" data-date="2019-02-11 15:41">微信指数</a></li>
+            <li><i class="ie"></i><a href="https://trendinsight.oceanengine.com/arithmetic-index" data-date="2019-02-11 15:41">巨量算数</a></li>
+            <li><i class="ie"></i><a href="https://index.1688.com/" data-date="2019-02-11 15:41">阿里指数</a></li>
+            <li><i class="ie"></i><a href="https://index.iqiyi.com/" data-date="2020-10-11 13:41">爱奇艺指数</a></li>
+            <li><i class="ie"></i><a href="https://auto.sina.com.cn/zhishu/" data-date="2020-10-07 15:15">新浪汽车指数</a></li>
+          </ul>
+        </li>
+        <li><i class="folder"></i><span>大数据</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2021-07-13 09:00">───互联网数据───</a></li>
+            <li><i class="ie"></i><a href="https://gs.statcounter.com/" data-date="2019-02-11 15:41">StatCounter 统计</a></li>
+            <li><i class="ie"></i><a href="http://tongji.baidu.com/data/district" data-date="2019-02-11 15:41">百度统计</a></li>
+            <li><i class="ie"></i><a href="https://tongji.baidu.com/research/app" data-date="2019-02-11 15:41">百度流量研究院</a></li>
+            <li><i class="ie"></i><a href="https://index.iresearch.com.cn/new/#/" data-date="2019-02-11 15:41">艾瑞互联网指数</a></li>
+            <li><i class="ie"></i><a href="https://www.yixieshi.com/report" data-date="2019-02-11 15:41">互联网数据报告</a></li>
+            <li><i class="ie"></i><a href="https://w3techs.com/" data-date="2021-01-02 00:02">全球网站技术调查报告</a></li>
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2021-07-13 08:58">────────────────</a></li>
+            <li><i class="ie"></i><a href="https://heat.qq.com/index.php" data-date="2019-02-11 15:41">腾讯位置大数据</a></li>
+            <li><i class="ie"></i><a href="https://mta.qq.com/mta/data/device" data-date="2019-02-11 15:41">腾讯移动分析</a></li>
+            <li><i class="ie"></i><a href="https://heat.qq.com/qianxi.php" data-date="2019-02-11 15:41">腾讯出行热度</a></li>
+            <li><i class="ie"></i><a href="https://report.amap.com/index.do" data-date="2019-02-11 15:41">交通拥堵延时指数</a></li>
+            <li><i class="ie"></i><a href="https://www.opengps.cn/Data/IP/LocHighAcc.aspx" data-date="2019-02-11 15:41">高精度IP定位</a></li>
+            <li><i class="ie"></i><a href="http://data.un.org/" data-date="2019-02-11 15:41">UN Data</a></li>
+            <li><i class="ie"></i><a href="http://www.soopat.com/" data-date="2019-02-11 15:41">SooPAT - 专利搜索</a></li>
+            <li><i class="ie"></i><a href="https://www.iimedia.cn/c880" data-date="2020-10-07 15:24">艾媒网 - 新行业研究报告</a></li>
+            <li><i class="ie"></i><a href="http://www.199it.com/archives/category/report" data-date="2019-02-11 15:41">199IT 行业研究报告</a></li>
+            <li><i class="ie"></i><a href="https://www.jiguang.cn/reports" data-date="2020-10-07 15:22">极光大数据报告</a></li>
+            <li><i class="ie"></i><a href="https://www.zq-ai.com/#/fe/xgfybigdata" data-date="2020-10-13 15:00">新冠疫情分布大数据</a></li>
+            <li><i class="ie"></i><a href="https://www.itjuzi.com/" data-date="2019-02-11 15:41">IT桔子</a></li>
+            <li><i class="ie"></i><a href="https://www.qimai.cn/" data-date="2019-02-11 15:41">七麦数据</a></li>
+            <li><i class="ie"></i><a href="https://www.cbndata.com/star-rank/ranks/total" data-date="2020-10-15 18:42">明星消费影响力综合榜</a></li>
+          </ul>
+        </li>
+        <li><i class="folder"></i><span>排行榜</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://www.alexa.com/topsites" data-date="2020-11-13 22:25">Alexa 网站排名</a></li>
+            <li><i class="ie"></i><a href="https://top.chinaz.com/" data-date="2020-10-07 15:29">网站排行榜</a></li>
+            <li><i class="ie"></i><a href="http://www.alexa.cn/siterank/" data-date="2020-10-07 15:28">中文网站排行榜</a></li>
+            <li><i class="ie"></i><a href="http://www.fortunechina.com/fortune500/index.htm" data-date="2021-07-09 20:14">世界 500 强</a></li>
+            <li><i class="ie"></i><a href="https://top.chinaz.com/gongsi/" data-date="2020-10-07 15:26">公司排行榜</a></li>
+            <li><i class="ie"></i><a href="https://index.baidu.com/v2/rank/index.html?#/industryrank" data-date="2021-07-09 20:10">百度行业排行</a></li>
+            <li><i class="ie"></i><a href="http://www.aldzs.com/toplist?type=0&amp;typeid=0&amp;date=1&amp;name=%E9%98%BF%E6%8B%89%E4%B8%81%E6%80%BB%E6%A6%9C" data-date="2021-07-12 13:39">小程序排行榜</a></li>
+            <li><i class="ie"></i><a href="https://www.shanghairanking.cn/" data-date="2020-10-07 15:20">大学权威排名</a></li>
+            <li><i class="ie"></i><a href="https://www.passportindex.org/" data-date="2019-05-06 19:45">各国护照效力排行榜</a></li>
+            <li><i class="ie"></i><a href="https://index.iresearch.com.cn/app" data-date="2019-02-11 15:41">艾瑞移动APP指数</a></li>
+            <li><i class="ie"></i><a href="https://www.internetworldstats.com/stats.htm" data-date="2021-07-13 09:14">互联网使用人口统计</a></li>
+            <li><i class="ie"></i><a href="http://mi.talkingdata.com/" data-date="2019-02-11 15:41">TalkingData</a></li>
+          </ul>
+        </li>
+        <li data-lock="123"><i class="folder"></i><span>信息查询</span>
+          <ul class="menu">
+            <li><i class="ie"></i><a href="https://www.tianyancha.com/" data-date="2019-02-11 15:41">天眼查</a></li>
+            <li><i class="ie"></i><a href="https://www.qcc.com/" data-date="2021-07-11 17:40">企查查</a></li>
+            <li><i class="ie"></i><a href="https://www.hanghangcha.com/" data-date="2021-07-11 17:40">行行查</a></li>
+            <li><i class="ie"></i><a href="https://www.qixin.com/" data-date="2019-02-11 15:41">启信宝</a></li>
+            <li><i class="ie"></i><a href="https://separator.mayastudios.com/index.php?t=horz" data-date="2021-07-12 13:40">────────────────</a></li>
+            <li><i class="ie"></i><a href="http://zxgk.court.gov.cn/zhzxgk/" data-date="2021-07-11 17:35">被执行人信息查询</a></li>
+            <li><i class="ie"></i><a href="https://www.chsi.com.cn/xlcx/index.jsp" data-date="2021-07-11 17:36">学信网学历查询</a></li>
+            <li><i class="ie"></i><a href="http://www.pbccrc.org.cn/" data-date="2021-07-11 17:38">银行征信查询</a></li>
+            <li><i class="ie"></i><a href="http://zscx.osta.org.cn/" data-date="2021-07-11 17:36">国家职业资格证书查询</a></li>
+            <li><i class="ie"></i><a href="http://www.gsxt.gov.cn/corp-query-homepage.html" data-date="2019-02-11 15:41">国家企业信用信息公示</a></li>
+            <li><i class="ie"></i><a href="http://www.gb688.cn/bzgk/gb/" data-date="2020-11-14 00:50">国家标准全文公开</a></li>
+            <li><i class="ie"></i><a href="https://data.stats.gov.cn/" data-date="2019-02-11 15:41">国家统计局数据</a></li>
+            <li><i class="ie"></i><a href="http://www.lingoes.cn/zh/translator/langcode.htm" data-date="2019-04-02 12:23">语言代码表</a></li>
+            <li><i class="ie"></i><a href="https://www.chinassl.net/ssltools/country-code.html" data-date="2019-04-02 12:25">国家代码表</a></li>
+            <li><i class="ie"></i><a href="http://www.xzqh.org/old/waiguo/index.htm" data-date="2020-03-22 19:27">世界行政区划网</a></li>
+            <li><i class="ie"></i><a href="https://countrymeters.info/cn" data-date="2020-03-22 19:48">世界人口实时统计</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+
+</div>
+
+<!-- ============================================================ -->
+<!-- ★★★ 渲染逻辑区（文件夹加密，解密后不再询问）★★★ -->
+<!-- ============================================================ -->
+<script>
+  (function() {
+    'use strict';
+
+    const rootList = document.getElementById('rootList');
+    const searchInput = document.getElementById('searchInput');
+    const noResultsDiv = document.getElementById('noResults');
+    const sourceEl = document.getElementById('bookmark-source');
+
+    /* ---------- 文件夹密码弹窗 DOM ---------- */
+    const pwdOverlay = document.getElementById('pwdOverlay');
+    const pwdCard = document.getElementById('pwdCard');
+    const pwdTitle = document.getElementById('pwdTitle');
+    const pwdDesc = document.getElementById('pwdDesc');
+    const pwdInput = document.getElementById('pwdInput');
+    const pwdError = document.getElementById('pwdError');
+    const pwdSubmitBtn = document.getElementById('pwdSubmitBtn');
+    const pwdCancelBtn = document.getElementById('pwdCancelBtn');
+    const pwdRemember = document.getElementById('pwdRemember');
+
+    /* 本次会话已解锁的文件夹（key = 文件夹唯一 id，value = 解锁密码） */
+    const unlockedFolders = new Map();
+
+    /* 当前正在解锁的文件夹上下文 */
+    let currentLock = null;
+
+    /* ============================================================
+       文件夹密码弹窗控制
+    ============================================================ */
+    function openPwdDialog({ title, desc, onSuccess }) {
+      currentLock = { onSuccess };
+      pwdTitle.textContent = title;
+      pwdDesc.textContent = desc;
+      pwdInput.value = '';
+      pwdInput.classList.remove('error');
+      pwdError.classList.remove('show');
+      pwdRemember.checked = true; // 默认勾选“本次会话记住”
+      pwdOverlay.classList.add('show');
+      setTimeout(() => pwdInput.focus(), 80);
+    }
+
+    function closePwdDialog() {
+      pwdOverlay.classList.remove('show');
+      currentLock = null;
+    }
+
+    function submitPwdDialog() {
+      if (!currentLock) return;
+      const input = pwdInput.value.trim();
+      if (!input) {
+        pwdInput.classList.add('error');
+        pwdError.textContent = '请输入密码';
+        pwdError.classList.add('show');
+        return;
+      }
+      const ok = currentLock.onSuccess(input, pwdRemember.checked);
+      if (ok === true) {
+        closePwdDialog();
+      } else {
+        pwdInput.classList.add('error');
+        pwdError.textContent = '密码错误，请重试';
+        pwdError.classList.add('show');
+        pwdCard.classList.add('pwd-shake');
+        setTimeout(() => pwdCard.classList.remove('pwd-shake'), 420);
+        pwdInput.value = '';
+        pwdInput.focus();
+      }
+    }
+
+    pwdSubmitBtn.addEventListener('click', submitPwdDialog);
+    pwdCancelBtn.addEventListener('click', closePwdDialog);
+    pwdInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); submitPwdDialog(); }
+    });
+    pwdInput.addEventListener('input', () => {
+      pwdInput.classList.remove('error');
+      pwdError.classList.remove('show');
+    });
+    pwdOverlay.addEventListener('click', (e) => {
+      if (e.target === pwdOverlay) closePwdDialog();
+    });
+
+    /* ============================================================
+       书签渲染
+    ============================================================ */
+    const sourceUl = sourceEl.querySelector('ul.menu');
+    if (!sourceUl) {
+      rootList.innerHTML = '<div style="padding:1rem;color:#8da2b5;">数据区为空，请将 ul.menu 内容粘贴到 #bookmark-source 中。</div>';
+      return;
+    }
+
+    // 收集所有书签，判断“最近添加”
+    function collectAllBookmarks(container) {
+      const bookmarks = [];
+      const links = container.querySelectorAll('li > a');
+      links.forEach(a => {
+        const dateStr = a.getAttribute('data-date');
+        if (dateStr) {
+          bookmarks.push({
+            title: a.textContent.trim(),
+            timestamp: new Date(dateStr.replace(/-/g, '/')).getTime()
+          });
+        }
+      });
+      return bookmarks;
+    }
+
+    const allBookmarks = collectAllBookmarks(sourceUl);
+
+    function getRecentTitles() {
+      if (allBookmarks.length === 0) return new Set();
+      const maxTimestamp = Math.max(...allBookmarks.map(b => b.timestamp));
+      const threshold = maxTimestamp - 30 * 24 * 60 * 60 * 1000;
+      const recentTitles = new Set();
+      allBookmarks.forEach(b => {
+        if (b.timestamp >= threshold) recentTitles.add(b.title);
+      });
+      return recentTitles;
+    }
+
+    const recentTitles = getRecentTitles();
+
+    /* 为每个文件夹生成唯一 id */
+    let folderSeq = 0;
+
+    // 递归转换
+    function convertMenu(ulElement, parentUl) {
+      const children = Array.from(ulElement.children);
+      children.forEach(li => {
+        const folderIcon = li.querySelector(':scope > i.folder');
+        const link = li.querySelector(':scope > a');
+        const subUl = li.querySelector(':scope > ul.menu');
+
+        const isFolder = !!folderIcon;
+        const isBookmark = !!link;
+        if (!isFolder && !isBookmark) return;
+
+        const newLi = document.createElement('li');
+        newLi.className = 'tree-node';
+
+        const title = isFolder
+          ? (li.querySelector(':scope > span')?.textContent.trim() || '未命名')
+          : link.textContent.trim();
+
+        newLi.setAttribute('data-title', title.toLowerCase());
+        newLi.setAttribute('data-type', isFolder ? 'folder' : 'bookmark');
+
+        const row = document.createElement('div');
+        row.className = 'node-row';
+
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'node-label';
+
+        /* ---------- 判断文件夹是否加密 ---------- */
+        const folderLockPwd = isFolder ? li.getAttribute('data-lock') : null;
+        const isLockedFolder = isFolder && !!folderLockPwd;
+
+        if (isLockedFolder) {
+          newLi.classList.add('locked-folder');
+          newLi.setAttribute('data-lock-id', 'folder-' + (++folderSeq));
+          // 保存原始密码到 dataset，便于解密后判断/清理
+          newLi.dataset.lockPwd = folderLockPwd;
+        }
+
+        if (isFolder && subUl) {
+          labelDiv.classList.add('clickable-folder');
+          labelDiv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleFolderClick({ newLi, folderLockPwd, title });
+          });
+          const iconEl = document.createElement('i');
+          iconEl.className = 'folder';
+          iconEl.setAttribute('aria-hidden', 'true');
+          labelDiv.appendChild(iconEl);
+        } else if (isBookmark && link) {
+          labelDiv.classList.add('clickable-bookmark');
+          const url = link.getAttribute('href');
+          labelDiv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (url) window.open(url, '_blank', 'noopener,noreferrer');
+          });
+          const ieIcon = document.createElement('i');
+          ieIcon.className = 'ie';
+          ieIcon.setAttribute('aria-hidden', 'true');
+          ieIcon.title = 'IE 书签';
+          labelDiv.appendChild(ieIcon);
+        }
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'node-name';
+        nameSpan.textContent = title;
+        nameSpan.setAttribute('data-original', title);
+        labelDiv.appendChild(nameSpan);
+
+        if (isBookmark && link) {
+          const hint = document.createElement('span');
+          hint.className = 'new-window-hint';
+          hint.textContent = '↗';
+          labelDiv.appendChild(hint);
+
+          const dateStr = link.getAttribute('data-date');
+          if (dateStr) {
+            const tooltip = document.createElement('span');
+            tooltip.className = 'time-tooltip';
+            tooltip.textContent = `📅 ${dateStr}`;
+            labelDiv.appendChild(tooltip);
+          }
+          if (recentTitles.has(title)) newLi.classList.add('recent-bookmark');
+        } else if (isFolder) {
+          /* 加密文件夹只显示锁标识，不改变颜色 */
+          if (isLockedFolder) {
+            const badge = document.createElement('span');
+            badge.className = 'lock-badge';
+            badge.textContent = '🔒 加密';
+            labelDiv.appendChild(badge);
+          }
+          const dateStr = li.getAttribute('data-date');
+          if (dateStr) {
+            const tooltip = document.createElement('span');
+            tooltip.className = 'time-tooltip';
+            tooltip.textContent = `📅 ${dateStr}`;
+            labelDiv.appendChild(tooltip);
+          }
+        }
+
+        row.appendChild(labelDiv);
+        newLi.appendChild(row);
+
+        if (isFolder && subUl) {
+          const childUl = document.createElement('ul');
+          childUl.className = 'child-list default-collapsed';
+          convertMenu(subUl, childUl);
+          newLi.appendChild(childUl);
+        }
+        parentUl.appendChild(newLi);
+      });
+    }
+
+    /* ============================================================
+       文件夹点击处理：加密则弹密码框，解锁后不再询问
+    ============================================================ */
+    function handleFolderClick({ newLi, folderLockPwd, title }) {
+      const childUl = newLi.querySelector(':scope > ul');
+      if (!childUl) return;
+
+      const lockId = newLi.getAttribute('data-lock-id');
+
+      // 已解锁过（本次会话）的加密文件夹，或普通文件夹：直接切换
+      if (!folderLockPwd || unlockedFolders.has(lockId)) {
+        toggleFolder(newLi);
+        return;
+      }
+
+      // 加密文件夹：弹密码框
+      openPwdDialog({
+        title: '🔐 此文件夹已加密',
+        desc: `「${title}」需要密码才能展开`,
+        onSuccess: (inputPwd, rememberInSession) => {
+          if (inputPwd !== folderLockPwd) return false;
+          // 密码正确：记录已解锁，清除锁定状态
+          if (rememberInSession) {
+            unlockedFolders.set(lockId, folderLockPwd);
+          }
+          // 无论是否勾选“记住”，本次解锁后都标记为已解锁（颜色不变，仅隐藏锁标记）
+          newLi.classList.add('unlocked');
+          // 清除锁定，后续点击一律走普通文件夹逻辑
+          newLi.classList.remove('locked-folder');
+          newLi.removeAttribute('data-lock-id');
+          newLi.dataset.lockPwd = '';
+          // 展开内容
+          childUl.classList.remove('default-collapsed');
+          return true;
+        }
+      });
+    }
+
+    function toggleFolder(li) {
+      const childUl = li.querySelector(':scope > ul');
+      if (!childUl) return;
+      childUl.classList.toggle('default-collapsed');
+    }
+
+    const rootUl = document.createElement('ul');
+    rootUl.className = 'tree-node';
+    rootList.appendChild(rootUl);
+
+    convertMenu(sourceUl, rootUl);
+
+    /* ============================================================
+       搜索
+    ============================================================ */
+    function clearHighlights() {
+      document.querySelectorAll('.node-name').forEach(span => {
+        const original = span.getAttribute('data-original');
+        if (original !== null) span.innerHTML = original;
+      });
+    }
+
+    function highlightName(span, searchTerm) {
+      const original = span.getAttribute('data-original');
+      if (!original) return;
+      if (!searchTerm) { span.textContent = original; return; }
+      const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
+      const parts = original.split(regex);
+      span.innerHTML = '';
+      parts.forEach(part => {
+        if (part.toLowerCase() === searchTerm.toLowerCase()) {
+          const mark = document.createElement('mark');
+          mark.textContent = part;
+          span.appendChild(mark);
+        } else {
+          span.appendChild(document.createTextNode(part));
+        }
+      });
+    }
+
+    function escapeRegExp(str) {
+      return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function resetAllToCollapsed() {
+      document.querySelectorAll('.tree-node > ul').forEach(ul => {
+        ul.classList.add('default-collapsed');
+      });
+    }
+
+    function filterTree(searchTerm) {
+      if (!searchTerm.trim()) {
+        clearHighlights();
+        document.querySelectorAll('.tree-node').forEach(li => li.classList.remove('node-hidden'));
+        resetAllToCollapsed();
+        noResultsDiv.style.display = 'none';
+        return;
+      }
+
+      const term = searchTerm.trim().toLowerCase();
+      let anyMatch = false;
+
+      document.querySelectorAll('.tree-node').forEach(li => li.classList.remove('node-hidden'));
+      resetAllToCollapsed();
+      clearHighlights();
+
+      function processNode(li) {
+        const nameSpan = li.querySelector('.node-name');
+        const originalName = nameSpan ? nameSpan.getAttribute('data-original') : '';
+        const isMatch = originalName.toLowerCase().includes(term);
+
+        const childUl = li.querySelector(':scope > ul');
+        let childHasMatch = false;
+        if (childUl) {
+          childUl.querySelectorAll(':scope > li').forEach(childLi => {
+            if (processNode(childLi)) childHasMatch = true;
+          });
+        }
+
+        const shouldShow = isMatch || childHasMatch;
+        if (shouldShow) { li.classList.remove('node-hidden'); anyMatch = true; }
+        else li.classList.add('node-hidden');
+
+        if (isMatch && nameSpan) highlightName(nameSpan, searchTerm);
+        else if (nameSpan) nameSpan.innerHTML = originalName;
+
+        if (childUl && shouldShow) childUl.classList.remove('default-collapsed');
+        return shouldShow;
+      }
+
+      rootUl.querySelectorAll(':scope > li').forEach(li => processNode(li));
+      noResultsDiv.style.display = anyMatch ? 'none' : 'block';
+    }
+
+    let debounceTimer;
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => filterTree(e.target.value), 200);
+    });
+  })();
+</script>
+</body>
+</html>

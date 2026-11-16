@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DATE 时间戳批量转换工具</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --bd:#dfe3e8; --pri:#2563eb; --txt:#1f2937; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:24px; font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+         background:var(--bg); color:var(--txt); }
+  h1 { font-size:18px; margin:0 0 16px; }
+  .wrap { max-width:1100px; margin:0 auto; }
+  .bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px;
+         background:var(--card); border:1px solid var(--bd); border-radius:8px; padding:12px; }
+  .bar label { font-size:13px; display:flex; align-items:center; gap:6px; }
+  select, input[type=text] { padding:5px 8px; border:1px solid var(--bd); border-radius:6px; font-size:13px; }
+  button { padding:6px 14px; border:1px solid var(--pri); background:var(--pri); color:#fff;
+           border-radius:6px; cursor:pointer; font-size:13px; }
+  button.ghost { background:#fff; color:var(--pri); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .panes { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:800px){ .panes { grid-template-columns:1fr; } }
+  .pane { background:var(--card); border:1px solid var(--bd); border-radius:8px; overflow:hidden; display:flex; flex-direction:column; }
+  .pane h2 { font-size:13px; margin:0; padding:10px 12px; border-bottom:1px solid var(--bd); background:#fafbfc; }
+  textarea { width:100%; min-height:420px; border:0; padding:12px; font-family: Consolas, Menlo, monospace;
+             font-size:13px; line-height:1.5; resize:vertical; outline:none; }
+  .status { font-size:12px; color:#6b7280; margin-top:8px; }
+  .err { color:#dc2626; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>DATE 时间戳批量转换工具（10 位秒级 → 可读日期）</h1>
+
+  <div class="bar">
+    <label>时区：
+      <select id="tz">
+        <option value="8" selected>北京时间 UTC+8</option>
+        <option value="0">UTC</option>
+        <option value="-5">UTC-5</option>
+        <option value="9">UTC+9</option>
+      </select>
+    </label>
+    <label>格式：
+      <select id="fmt">
+        <option value="%Y-%m-%d %H:%M:%S" selected>YYYY-MM-DD HH:mm:ss</option>
+        <option value="%Y/%m/%d %H:%M">YYYY/MM/DD HH:mm</option>
+        <option value="%Y-%m-%d">YYYY-MM-DD</option>
+        <option value="custom">自定义…</option>
+      </select>
+    </label>
+    <input type="text" id="customFmt" placeholder="如 %Y年%m月%d日 %H:%M" style="display:none; width:220px;">
+    <label>输出属性名：<input type="text" id="attrName" value="DATE" style="width:90px;"></label>
+    <button id="btnConvert">转换 →</button>
+    <button id="btnCopy" class="ghost">复制结果</button>
+    <button id="btnDownload" class="ghost">下载 .html</button>
+  </div>
+
+  <div class="panes">
+    <div class="pane">
+      <h2>输入（粘贴原始 HTML，含 DATE="10位数字"）</h2>
+      <textarea id="input" placeholder='<a href="..." DATE="1549870886">公众号</a>'></textarea>
+    </div>
+    <div class="pane">
+      <h2>输出（转换后）</h2>
+      <textarea id="output" readonly></textarea>
+    </div>
+  </div>
+  <div class="status" id="status">就绪</div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const input = $('input'), output = $('output'), status = $('status');
+  const tzSel = $('tz'), fmtSel = $('fmt'), customFmt = $('customFmt'), attrName = $('attrName');
+
+  // 显示/隐藏自定义格式输入
+  fmtSel.addEventListener('change', () => {
+    customFmt.style.display = fmtSel.value === 'custom' ? 'inline-block' : 'none';
+  });
+
+  // 把 Date 按指定时区格式化
+  function formatDate(date, tzOffsetHours, fmt){
+    // 用 UTC 时间 + 时区偏移，手工替换格式符，避免 locale 差异
+    const ms = date.getTime() + tzOffsetHours * 3600 * 1000;
+    const d = new Date(ms);
+    const pad = n => String(n).padStart(2, '0');
+    const map = {
+      '%Y': d.getUTCFullYear(),
+      '%m': pad(d.getUTCMonth() + 1),
+      '%d': pad(d.getUTCDate()),
+      '%H': pad(d.getUTCHours()),
+      '%M': pad(d.getUTCMinutes()),
+      '%S': pad(d.getUTCSeconds()),
+    };
+    return fmt.replace(/%[YmdHMS]/g, k => map[k] ?? k);
+  }
+
+  function convert(){
+    const text = input.value;
+    if (!text.trim()) { status.textContent = '请先粘贴内容'; status.className = 'status err'; return; }
+
+    const tz = parseInt(tzSel.value, 10);
+    let fmt = fmtSel.value;
+    if (fmt === 'custom') {
+      fmt = customFmt.value.trim() || '%Y-%m-%d %H:%M:%S';
+    }
+    const attr = (attrName.value.trim() || 'DATE').replace(/[^\w-]/g, '') || 'DATE';
+
+    // 只匹配「属性名="10位数字"」，保留其余内容
+    const re = new RegExp(attr + '="(\\d{10})"', 'g');
+    let count = 0;
+    const result = text.replace(re, (m, ts) => {
+      const date = new Date(parseInt(ts, 10) * 1000);
+      if (isNaN(date.getTime())) return m;
+      count++;
+      return attr + '="' + formatDate(date, tz, fmt) + '"';
+    });
+
+    output.value = result;
+    status.className = 'status';
+    status.textContent = count
+      ? '完成：共转换 ' + count + ' 处 ' + attr + ' 时间戳'
+      : '未找到匹配的 ' + attr + '="10位数字"，请检查输入或属性名';
+  }
+
+  $('btnConvert').addEventListener('click', convert);
+
+  $('btnCopy').addEventListener('click', async () => {
+    if (!output.value) { status.textContent = '没有可复制的结果'; status.className='status err'; return; }
+    try {
+      await navigator.clipboard.writeText(output.value);
+      status.className = 'status';
+      status.textContent = '已复制到剪贴板';
+    } catch(e) {
+      output.select(); document.execCommand('copy');
+      status.textContent = '已复制（兼容模式）';
+    }
+  });
+
+  $('btnDownload').addEventListener('click', () => {
+    if (!output.value) { status.textContent = '没有可下载的结果'; status.className='status err'; return; }
+    const blob = new Blob([output.value], {type:'text/html;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'menu_converted.html';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+})();
+</script>
+</body>
+</html>
