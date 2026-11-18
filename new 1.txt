@@ -1,0 +1,49 @@
+ /* ---------- 文件夹图标 ---------- */
+    .fa fa-folder fa-lg {
+      font-size: 1.2rem;
+      line-height: 1;
+      flex-shrink: 0;
+      width: 1.5rem;
+      text-align: center;
+      color: #f1c40f !important;
+      transition: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'FontAwesome';
+      font-style: normal;
+    }
+
+    .fa fa-folder fa-lg::before {
+      content: '\f07b';
+    }
+
+    .clickable-fa fa-folder fa-lg:hover .fa fa-folder fa-lg,
+    .node-label:hover .fa fa-folder fa-lg {
+      color: #f1c40f !important;
+    }
+
+    /* ---------- 书签图标 ---------- */
+    .fa fa-internet-explorer {
+      font-size: 1.2rem;
+      line-height: 1;
+      flex-shrink: 0;
+      width: 1.5rem;
+      text-align: center;
+      color: #0078d4;
+      transition: transform 0.1s ease, color 0.1s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'FontAwesome';
+      font-style: normal;
+    }
+
+    .fa fa-internet-explorer::before {
+      content: '\f26b';
+    }
+
+    .clickable-bookmark:hover .fa fa-internet-explorer {
+      transform: scale(1.12);
+      color: #005a9e;
+    }
