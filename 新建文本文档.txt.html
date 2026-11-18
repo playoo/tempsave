@@ -1,0 +1,151 @@
+<!-- 底部dock栏 -->
+<div class="ioui-content switch-container home-container sidebar_no container">
+    <div class="ioui-main">
+        <div class="content-wrap">
+            <div class="content-layout">
+                <div class="dock-container" id="dock-container" style="left: 50%;">
+                    <div class="dock" id="dock">
+                        <ul class="dock-icons">
+                            <!-- 这里添加您的图标 -->
+                            <li class="dock-icon-divider">
+                                <hr class="dock-divider" id="dock-divider" style="display: none">
+                                <!-- 添加分割线 -->
+                            </li>
+                            <!-- DeepSeek -->
+                            <li class="dock-icon" title="DeepSeek">
+                                <a href="https://chat.deepseek.com/" target="_blank">
+                                    <img src="https://t3.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=https://chat.deepseek.com/"
+                                         alt="DeepSeek">
+                                    <span class="docktooltip">DeepSeek</span>
+                                    <!-- 添加标题元素 -->
+                                </a>
+                            </li>
+                            <!-- ChatGPT -->
+                            <li class="dock-icon" title="ChatGPT">
+                                <a href="https://chatgpt.com/" target="_blank">
+                                    <img src="https://t3.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=https://chatgpt.com/" alt="ChatGPT">
+                                    <span class="docktooltip">ChatGPT</span>
+                                </a>
+                            </li>
+                            <!-- 豆包 -->
+                            <li class="dock-icon" title="豆包">
+                                <a href="https://www.doubao.com/chat/" target="_blank">
+                                    <img src="https://t3.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=https://www.doubao.com/"
+                                         alt="豆包">
+                                    <span class="docktooltip">豆包</span>
+                                </a>
+                            </li>
+                            <!-- 腾讯元宝 -->
+                            <li class="dock-icon" title="腾讯元宝">
+                                <a href="https://yuanbao.tencent.com/" target="_blank">
+                                    <img src="https://t3.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=https://yuanbao.tencent.com/"
+                                         alt="腾讯元宝">
+                                    <span class="docktooltip">腾讯元宝</span>
+                                </a>
+                            </li>
+							<!-- Kimi -->
+                            <li class="dock-icon" title="Kimi">
+                                <a href="https://kimi.moonshot.cn/" target="_blank">
+                                    <img src="https://t3.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=https://kimi.moonshot.cn/"
+                                         alt="Kimi">
+                                    <span class="docktooltip">Kimi</span>
+                                </a>
+                            </li>
+                            <!-- 通义千问 -->
+                            <li class="dock-icon" title="通义千问">
+                                <a href="https://tongyi.aliyun.com/" target="_blank">
+                                    <img src="https://img.alicdn.com/imgextra/i4/O1CN01EfJVFQ1uZPd7W4W6i_!!6000000006051-2-tps-112-112.png"
+                                         alt="通义千问">
+                                    <span class="docktooltip">通义千问</span>
+                                </a>
+                            </li>
+                            <!-- 文心一言 -->
+                            <li class="dock-icon" title="文心一言">
+                                <a href="https://yiyan.baidu.com/" target="_blank">
+                                    <img src="https://t3.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=https://yiyan.baidu.com/"
+                                         alt="文心一言">
+                                    <span class="docktooltip">文心一言</span>
+                                </a>
+                            </li>
+                            <li class="dock-icon-divider">
+                                <hr class="dock-divider">
+                                <!-- 添加分割线 -->
+                            </li>
+                            <!-- 其他应用图标 -->
+                            <li class="dock-icon" title="抖音">
+                                <a href="https://www.douyin.com/" target="_blank">
+                                    <img src="https://t3.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=https://www.douyin.com/" alt="抖音">
+                                    <span class="docktooltip">抖音</span>
+                                </a>
+                            </li>
+                            <li class="dock-icon" title="快手">
+                                <a href="https://www.kuaishou.com/" target="_blank">
+                                    <img src="https://t3.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=https://www.kuaishou.com/" alt="快手">
+                                    <span class="docktooltip">快手</span>
+                                </a>
+                            </li>
+                            <li class="dock-icon" title="哔哩哔哩">
+                                <a href="https://www.bilibili.com/" target="_blank">
+                                    <img src="https://t3.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=https://www.bilibili.com/" alt="哔哩哔哩">
+                                    <span class="docktooltip">哔哩哔哩</span>
+                                </a>
+                            </li>
+                            <li class="dock-icon" title="腾讯视频">
+                                <a href="https://v.qq.com/" target="_blank">
+                                    <img src="https://t3.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=https://v.qq.com/" alt="腾讯视频">
+                                    <span class="docktooltip">腾讯视频</span>
+                                </a>
+                            </li>
+                            <li class="dock-icon" title="优酷">
+                                <a href="https://www.youku.com/" target="_blank">
+                                    <img src="https://t3.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=https://www.youku.com/" alt="优酷">
+                                    <span class="docktooltip">优酷</span>
+                                </a>
+                            </li>
+                            <li class="dock-icon close-dock" title="关闭">
+                                <img src="Other/close.webp" alt="关闭">
+                                <span class="docktooltip">折叠dock栏</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="expand-dock" id="expand-dock" title="展开DOCK栏" style="display: none">
+                    <i class="iconfont icon-arrow-r"></i>
+                </div>
+                <!-- 添加应用的对话框 -->
+                <div id="addAppModal" class="modal" style="display: none">
+                    <div class="dockmodal-content">
+                        <span class="close">×</span>
+                        <h2>添加应用</h2>
+                        <h5>添加后右键点击即可删除</h5>
+                        <h2></h2>
+                        <form id="appForm">
+                            <label for="appUrl">网址链接（必填）：</label>
+                            <input type="text" id="appUrl" name="appUrl" required="" placeholder="请填写网址链接"><br><br>
+                            <label for="appName">网站名称（必填）：</label>
+                            <input type="text" id="appName" name="appName" required="" placeholder="请填写网站名称"><br><br>
+                            <label for="appIcon">图标链接（非必填）：</label>
+                            <input type="text" id="appIcon" name="appIcon" placeholder="不填写链接自动获取网址图标"><br><br>
+                            <input type="submit" value="添加">
+                        </form>
+                    </div>
+                </div>
+                <!-- 删除应用对话框 -->
+                <div id="customDialog" class="dialog" style="display: none">
+                    <div class="dialog-content">
+                        <p>确定删除该应用吗？</p>
+                        <button id="confirmDeleteBtn">确定</button>
+                        <button id="cancelDeleteBtn">取消</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="Other/dock.js"></script>
+<link rel="stylesheet" href="Other/dock.css">
+                
+			</div>
+		  </div>
+		</div>
+	</div>
