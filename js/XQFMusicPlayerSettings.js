@@ -9,7 +9,7 @@ class XQFMusicPlayer {
         this.defaultConfig = {
             enable: true,
             autoplay: true,
-            listId: "6634356386",
+            listId: "18207857060",
             server: "netease",
             syncTitle: false,
             lyricStyle: {
